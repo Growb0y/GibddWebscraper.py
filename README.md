@@ -15,6 +15,6 @@ python main.py vins_file required_types directory --dont_parse_site True
 ```
 - Аргументы:
     - `vins_file` - файл с винами;
-    - `required_types` - типы, подлежащие проверки (history/dtp/all);
+    - `required_types` - типы, подлежащие проверке (history/dtp/all);
     - `directory` - папка с результатами;
-    - `--dont_parse_site` - необязательный параметр: если сайт парсить уже не нужно - установить в True.
+    - `--dont_parse_site` - необязательный параметр, используемый при тестировании; если данные с сайта уже получены - установить в True.
