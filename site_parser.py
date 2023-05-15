@@ -1,7 +1,6 @@
 import os
 import pathlib
 import requests
-import datetime
 import threading
 from time import sleep
 
@@ -23,27 +22,59 @@ def parse_site(input_vins_file_, output_dir_, checkType_):
         'Accept': 'application/json, text/javascript, */*; q=0.01'
     }
 
+    def post_(vin_, i_):
+        print(f"posting {i_}...")
+        datas_ = {'vin': vin_, 'checkType': checkType_, 'captchaWord': captcha["captchaWord"],
+                  'captchaToken': captcha["captchaToken"]}
+        resp = requests.post(data=datas_, url=url, headers=headers)
+        print(f"\nResponse №{i_} info:")
+        print("Sent datas: ", datas_)
+        print(f"Response code: {resp.status_code}")
+        if resp.status_code == 500:
+            print("Internal Server Error")
+            return None
+        resp_json = resp.json()
+        print(f"Response.json: {resp_json}")
+        return resp_json
+
+    def post_data(vin_, i_, lock_file_writing_):
+
+        nonlocal captcha
+        nonlocal is_captcha_valid
+
+        resp_json = post_(vin_, i_)
+        if resp_json is None:
+            return
+        if 'message' in resp_json:
+            if resp_json['message'] == "Срок действия кода CAPTCHA устарел, попробуйте снова.":
+                print("Срок действия кода CAPTCHA устарел.")
+                is_captcha_valid = False
+                return
+            elif resp_json['message'] == 'Проверка CAPTCHA не была пройдена из-за неверного введенного значения.':
+                print("Неверно введена CAPTCHA.")
+                is_captcha_valid = False
+                return
+
+        with lock_file_writing_:
+            lines[i_ - 1] = '#' + vin_ + '\n'  # Ставим # перед проверенным вином
+            file_data.write(f"{i_} ::: {vin_} ::: {resp_json}\n")  # Записываем результат в выходной файл
+
+    # Проверка того, проверены ли все вины
+    def is_file_parsed(vins_file_copy):
+        with open(vins_file_copy, 'r') as file:
+            lines = file.readlines()
+            for line in lines[:-1]:
+                if not line.startswith('#'):
+                    return False
+        return True
+
     # Парсим, пока для всех винов не будет получен удовлетворительный ответ
     while True:
-
-        def post_(vin_, i_):
-            print(f"posting {i_}...")
-            datas_ = {'vin': vin_, 'checkType': checkType_, 'captchaWord': captcha["captchaWord"], 'captchaToken': captcha["captchaToken"]}
-            resp = requests.post(data=datas_, url=url, headers=headers)
-            print(f"\nResponse №{i_} info:")
-            print("Sent datas: ", datas_)
-            print(f"Response code: {resp.status_code}")
-            if resp.status_code == 500:
-                print("Internal Server Error")
-                return None
-            resp_json = resp.json()
-            print(f"Response.json: {resp_json}")
-            return resp_json
 
         # Проходим капчу
         while True:
             captcha = pass_captcha()
-            resp_json = post_('XUS2327BKN0000561', 1)  # Тестовый номер
+            resp_json = post_('XXXXXXXXXXXXXXXXX', 1)  # Тестовый номер
             if resp_json is None:
                 pass
             elif 'message' in resp_json:
@@ -75,33 +106,6 @@ def parse_site(input_vins_file_, output_dir_, checkType_):
                     # Записываем содержимое в новый файл
                     f2.write(data)
 
-        # dt = datetime.datetime.now()
-        # print('==================================================')
-        # print('ДАТА И ВРЕМЯ ЗАПРОСА:  ', dt)
-        # print('==================================================')
-
-        def post_data(vin_, i_, lock_file_writing_):
-
-            nonlocal captcha
-            nonlocal is_captcha_valid
-
-            resp_json = post_(vin_, i_)
-            if resp_json is None:
-                return
-            if 'message' in resp_json:
-                if resp_json['message'] == "Срок действия кода CAPTCHA устарел, попробуйте снова.":
-                    print("Срок действия кода CAPTCHA устарел.")
-                    is_captcha_valid = False
-                    return
-                elif resp_json['message'] == 'Проверка CAPTCHA не была пройдена из-за неверного введенного значения.':
-                    print("Неверно введена CAPTCHA.")
-                    is_captcha_valid = False
-                    return
-
-            with lock_file_writing_:
-                lines[i_-1] = '#' + vin_ + '\n'  # Ставим # перед проверенным вином
-                file_data.write(f"{i_} ::: {vin_} ::: {resp_json}\n")  # Записываем результат в выходной файл
-
         lock_file_writing = threading.Lock()
         data_file_path = f"{dir_}/data.txt"
         file_data = open(data_file_path, 'a', encoding='utf-8')
@@ -130,15 +134,6 @@ def parse_site(input_vins_file_, output_dir_, checkType_):
         with open(vins_file_copy, 'w', encoding='utf-8') as file:
             file.writelines(lines)
         file_data.close()
-
-        # Проверка того, проверены ли все вины
-        def is_file_parsed(vins_file_copy):
-            with open(vins_file_copy, 'r') as file:
-                lines = file.readlines()
-                for line in lines[:-1]:
-                    if not line.startswith('#'):
-                        return False
-            return True
 
         if is_file_parsed(vins_file_copy):
             return

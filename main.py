@@ -15,7 +15,6 @@ if __name__ == '__main__':
     parser.add_argument('required_types', type=str, help='Типы (history/dtp/all)')
     parser.add_argument('directory', type=str, help='Создаваемая папка с данными')
     parser.add_argument('--dont_parse_site', type=bool, help='Нужно ли парсить сайт', default=False)
-    parser.add_argument('--dont_parse_txt', type=bool, help='Нужно ли парсить данные, полученные с сайта', default=False)
     args = parser.parse_args()
 
     vins_file = args.vins_file
@@ -25,7 +24,7 @@ if __name__ == '__main__':
     iteration = args.directory
 
     is_parsing_site = not args.dont_parse_site
-    is_parsing_txt = not args.dont_parse_txt
+    is_parsing_txt = True
 
     valid_vins_file = vins_file + '_valid'
     dir_ = f'{root_dir}/{iteration}'

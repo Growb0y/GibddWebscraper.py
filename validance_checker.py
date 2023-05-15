@@ -26,7 +26,7 @@ def check_validance(input_vins_file_, valid_vins_file_):
     with open(input_vins_file_, 'r', encoding='utf-8') as file:
         lines = file.readlines()
 
-    desired_length = len('XUS2327BKN0000561')
+    desired_length = len('XXXXXXXXXXXXXXXXX')
     new_lines = []
     print('CheckLog:')
     for line in lines:
